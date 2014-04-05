@@ -1,0 +1,492 @@
+\documentclass[utf8]{beamer}
+\mode<article> % only for the article version
+{
+  \usepackage{fullpage}
+  \usepackage{hyperref}
+}
+
+\setbeamercovered{dynamic}
+\mode<presentation>
+{
+  \usetheme{Warsaw}
+  %\usecolortheme{beaver}
+  \usefonttheme[onlysmall]{structurebold}
+  \setbeamertemplate{background canvas}[vertical shading][bottom=red!10,top=blue!10]
+  \setbeamercovered{invisible}
+}
+
+\usepackage[T1]{fontenc}
+%\usepackage[utf8x]{inputenc}
+\usepackage{listings}
+\usepackage{beamerthemesplit}
+\usepackage{wasysym,amssymb,amsmath}
+
+% TIKZ ------------------------------------------------------------------
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric}
+\usetikzlibrary{fit}
+\usetikzlibrary{positioning}
+\usetikzlibrary{matrix}
+\usetikzlibrary{decorations.pathreplacing}
+
+% THEOREM Environments ---------------------------------------------------
+\newtheorem{thm}{Theorem}[section]
+\newtheorem{cor}[thm]{Corollary}
+\newtheorem{lem}[thm]{Lemma}
+\newtheorem{proposition}[thm]{Proposition}
+\newtheorem{conj}[thm]{Conjecture}
+\newtheorem{prob}[thm]{Problem}
+\newtheorem{clm}[thm]{Claim}
+\theoremstyle{definition}
+\newtheorem{defn}[thm]{Definition}
+\theoremstyle{remark}
+\newtheorem{rem}[thm]{Remark}
+
+\newcommand{\cExp}[3]{\mathbf{E}_{#1}\left[\left.#2\;\right\vert #3\right]}
+\newcommand{\sExp}[2]{\mathbf{E}_{#1}\left[#2\right]}
+\newcommand{\Exp}[1]{\sExp{}{#1}}
+\newcommand{\pr}[1]{\mathbb{P}\left(#1\right)}
+\newcommand{\cProb}[3]{\Pr_{#1}\left[ \left. #2 \;\right\vert #3 \right]}
+\newcommand{\sProb}[2]{\Pr_{#1}\left[ #2 ]}
+
+\newcommand{\mA}{\mathcal{A}}
+\newcommand{\mB}{\mathcal{B}}
+\newcommand{\mC}{\mathcal{C}}
+\newcommand{\mF}{\mathcal{F}}
+\newcommand{\mP}{\mathcal{P}}
+\newcommand{\mG}{\mathcal{G}}
+\newcommand{\mL}{\mathcal{L}}
+\newcommand{\mX}{\mathcal{X}}
+\newcommand{\mD}{\mathcal{D}}
+\newcommand{\mM}{\mathcal{M}}
+\newcommand{\mS}{\mathcal{S}}
+\newcommand{\hG}{\widehat{G}}
+\newcommand{\hH}{\widehat{H}}
+
+\newcommand{\Gnp}[2]{\mG(#1,#2)}
+\newcommand{\GnP}[1]{\Gnp{#1}{p}}
+\newcommand{\GNp}[1]{\Gnp{n}{#1}}
+\newcommand{\GNP}{\GNp{p}}
+
+\newcommand{\GNM}{\GNp{M}}
+\newcommand{\Bin}{\textrm{Bin}}
+\newcommand{\tG}{\widetilde{G}}
+\newcommand{\PerfMatch}{\mathcal{PM}}
+\newcommand{\Hamiltonicity}{\mathcal{HAM}}
+\newcommand{\EdgeConn}[1]{\mathcal{EC}_{#1}}
+\newcommand{\VertConn}[1]{\mathcal{VC}_{#1}}
+
+\newcommand{\Small}{\textsc{Small}}
+
+\newcommand{\sep}{:\,}
+\colorlet{redshaded}{red!25!bg}
+\colorlet{shaded}{black!25!bg}
+\colorlet{shadedshaded}{black!10!bg}
+\colorlet{blackshaded}{black!40!bg}
+
+\colorlet{darkred}{red!80!black}
+\colorlet{darkblue}{blue!80!black}
+\colorlet{darkgreen}{green!80!black}
+
+\usepackage[english]{babel}
+
+\newcommand{\pstexInput}[1]{%
+  \begin{picture}(0,0)%
+    \epsfbox{#1.pstex}%
+  \end{picture}%
+  \input{#1.pstex_t}%
+  }
+
+\newcommand{\blue}[1]{{\color{blue} #1}}
+\newcommand{\red}[1]{{\color{red} #1}}
+
+\title{Decision Trees, Random Forests \& Boosting}
+\author{Hagai Barmatz, Peleg Michaeli \& Ran Snitkovsky}
+
+
+\institute{{\color{blue}Tel-Aviv University}}
+\date{\today}
+
+
+\begin{document}
+\setbeamercovered{invisible}
+
+\frame{\titlepage
+\begin{center}
+\vspace {-0.5 in} Theory \& Implementations
+\end{center}
+}
+
+%\frame{\tableofcontents}
+
+\lstset{language=R,
+        basicstyle=\ttfamily,
+        keywordstyle=\color{blue}\ttfamily,
+        stringstyle=\color{red}\ttfamily,
+        commentstyle=\color{green}\ttfamily,
+        morecomment=[l][\color{magenta}]{\#}
+}
+
+\section{Random Forests}
+\subsection{Data}
+
+
+\begin{frame}[fragile]
+  \frametitle{Getting Data}
+    \begin{lstlisting}
+## The size of our training data
+MAXDATA <- 5000
+SHIFT <- 30000
+
+## Reading using 'data.table'
+require(data.table)
+file <- "data/EUR-USD_BID_1MIN-N63619143.csv"
+data <- as.data.frame(fread(file))
+
+## Getting close prices
+cl <- data[10]
+    \end{lstlisting}
+\end{frame}
+\begin{frame}[fragile]
+  \frametitle{Manipulating Data}
+    \begin{lstlisting}
+## Turn data into a vector
+cl.v <- c(cl)[[1]]
+
+## Filter 0's
+cl.nz <- cl.v[cl.v!=0]
+
+## Truncate data
+cl.tr <- cl.nz[(SHIFT+1):(SHIFT+MAXDATA)]
+
+## Outputs:
+## num [1:5000] 1.3 1.3 1.3 1.3 1.3 ...
+    \end{lstlisting}
+\end{frame}
+
+
+\subsection{Model}
+\begin{frame}
+  \frametitle{Suggested Model}
+  \begin{block}{Main Idea}
+    We're trying to predict the direction of the next close price (1 for
+    higher, -1 for lower, 0 for equal), based on the differences between the
+    current close price and each of the 100 last close prices.
+
+    This is a \emph{Classification Problem}.
+  \end{block}
+\end{frame}
+
+
+\begin{frame}[fragile]
+  \frametitle{Learning Data}
+    \begin{lstlisting}
+## Producing the case matrix
+n <- length(cl.tr)
+m <- 100
+x <- array(dim=c(n,m))
+for (i in 1:m) {
+  x[,i] <- c(rep(NA, i), diff(cl.tr, lag=i))
+}
+
+## Truncating the matrix to avoid NA's
+x <- x[(m+1):(n-1),]
+    \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Response Vector}
+    \begin{lstlisting}
+## Producing the response vector
+diffs <- diff(cl.tr, lag=1)[(m+1):(n-1)]
+diffs.sgn <- sign(diffs)
+
+## we use 'factor' to force classification
+y <- factor(diffs.sgn)
+    \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{R Package}
+  \begin{block}{{\tt randomForest} -- from the docs}
+    {\tt randomForest} implements Breiman’s random forest algorithm (based on
+    Breiman and Cutler’s original Fortran code) for classification and
+    regression. It can also be used in unsupervised mode for assessing
+    proximities among data points.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{R Package}
+  \begin{block}{Arguments (selection)}
+    \begin{description}
+      \item[{\tt x}] a data frame or a matrix of predictors describing the
+        model to be fitted.
+      \item[{\tt y}] A response vector. If a factor, classification is
+        assumed, otherwise regression is assumed. If omitted, randomForest
+        will run in unsupervised mode.
+      \item[{\tt ntree}] Number of trees to grow. This should not be set to
+        too small a number, to ensure that every input row gets predicted at
+        least a few times.
+      \item[{\tt mtry}] Number of variables randomly sampled as candidates at
+        each split. Note that the default values are different for
+        classification ($\sqrt{p}$ where $p$ is number of variables in {\tt
+        x}) and regression ($\frac{p}{3}$)
+    \end{description}
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{The Model}
+    \begin{lstlisting}
+## Getting the package
+require('randomForest')
+
+## Constructing the model
+## We set 'importance=TRUE' to asses importance
+## of predictors
+rf <- randomForest(x, y, importance=TRUE)
+
+## This takes some time...
+    \end{lstlisting}
+\end{frame}
+
+\subsection{Output}
+\begin{frame}[fragile]
+  \frametitle{Model Output}
+    \begin{lstlisting}
+Call:
+ randomForest(x = x, y = y, importance = TRUE) 
+     Type of random forest: classification
+                     Number of trees: 500
+No. of variables tried at each split: 10
+
+        OOB estimate of  error rate: 50.99%
+Confusion matrix:
+    -1    0   1 class.error
+-1 645  300 593   0.5806242
+0  350 1124 345   0.3820781
+1  587  323 632   0.5901427
+    \end{lstlisting}
+\end{frame}
+\begin{frame}[fragile]
+  \frametitle{Model Output}
+    \begin{lstlisting}
+    plot(rf$importance[,4])
+    \end{lstlisting}
+    \begin{figure}
+      \centering
+      \includegraphics[scale=.35]{imp.pdf}
+      \label{fig:digraph}
+    \end{figure}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Validating Importance}
+  \begin{block}{Does it mean anything?}
+    \begin{itemize}\pause
+      \item All predictors are of low importance\pause
+      \item More actual predictors are more important\pause
+      \item Is this random? We can check that!
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Random Predictor}
+    \begin{lstlisting}
+## Producing the new case matrix
+x.r <- array(dim=c(n,(m+1)))
+for (i in 1:m) {
+  x.r[,i] <- c(rep(NA, i), diff(cl.tr, lag=i))
+}
+x.r[,m+1] <- runif(n, -0.001, 0.001)
+
+## Truncating the matrix to avoid NA's
+x.r <- x.r[(m+1):(n-1),]
+
+## Constructing the new model
+rf.r <- randomForest(x.r, y, importance=TRUE)
+    \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Random Predictor -- Output}
+    \begin{lstlisting}
+    plot(rf.r$importance[,4])
+    \end{lstlisting}
+    \begin{figure}
+      \centering
+      \includegraphics[scale=.35]{impr.pdf}
+      \label{fig:digraph}
+    \end{figure}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Validating Importance}
+  \begin{block}{Does it mean anything? (cont.)}
+    Will it be smart enough to recognize the importance of a mega-important
+    predictor, such as a ... predictor from the future?
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Predictor from the Future}
+    \begin{lstlisting}
+## Producing the new case matrix
+x.f <- array(dim=c(n,(m+1)))
+for (i in 1:m) {
+  x.f[,i] <- c(rep(NA, i), diff(cl.tr, lag=i))
+}
+
+## Truncating the matrix to avoid NA's
+x.f <- x.f[(m+1):(n-1),]
+x.f[,m+1] <- diffs
+
+## Constructing the new model
+rf.f <- randomForest(x.f, y, importance=TRUE)
+    \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Predictor from the Future -- Output}
+    \begin{lstlisting}
+Call:
+ randomForest(x = x.f, y = y, importance = TRUE) 
+     Type of random forest: classification
+                     Number of trees: 500
+No. of variables tried at each split: 10
+
+        OOB estimate of  error rate: 0.69%
+Confusion matrix:
+     -1    0    1 class.error
+-1 1538    0    0  0.00000000
+0    16 1785   18  0.01869159
+1     0    0 1542  0.00000000
+    \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Predictor from the Future -- Output}
+    \begin{lstlisting}
+    plot(rf.f$importance[,4])
+    \end{lstlisting}
+    \begin{figure}
+      \centering
+      \includegraphics[scale=.35]{impf.pdf}
+      \label{fig:digraph}
+    \end{figure}
+\end{frame}
+
+\subsection{Test}
+\begin{frame}[fragile]
+  \frametitle{Testing the Model}
+    \begin{lstlisting}
+## The shift of our test data
+SHIFT.T <- 60000
+
+## Truncate test data
+cl.tst <- cl.nz[(SHIFT.T+1):(SHIFT.T+MAXDATA)]
+x.tst <- array(dim=c(n,m))
+for (i in 1:m) {
+  x.tst[,i] <- c(rep(NA, i), diff(cl.tst, lag=i))
+}
+x.tst <- x.tst[(m+1):(n-1),]
+    \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Testing the Model}
+    \begin{lstlisting}
+## Test response vector
+diffs.tst <- diff(cl.tst, lag=1)[(m+1):(n-1)]
+diffs.tst.sgn <- sign(diffs.tst)
+y.tst <- factor(diffs.tst.sgn)
+
+## Constructing the model
+rf.tst <- randomForest(x, y, importance=TRUE,
+                       xtest=x.tst, ytest=y.tst)
+    \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Model Output}
+    \begin{lstlisting}
+        OOB estimate of  error rate: 51.01%
+Confusion matrix:
+    -1    0   1 class.error
+-1 621  314 603   0.5962289
+0  346 1128 345   0.3798791
+1  592  299 651   0.5778210
+                Test set error rate: 42.19%
+Confusion matrix:
+    -1    0   1 class.error
+-1 556  125 579   0.5587302
+0  310 1670 433   0.3079155
+1  517  103 606   0.5057096
+    \end{lstlisting}
+\end{frame}
+
+\section{AdaBoost}
+\subsection{Model}
+\begin{frame}
+  \frametitle{R Package}
+  \begin{block}{{\tt adabag} ({\tt boosting}) -- from the docs}
+    Fits the AdaBoost.M1 (Freund and Schapire, 1996) and SAMME (Zhu et al.,
+    2009) algorithms using classification trees as single classifiers.
+  \end{block}\pause
+  \begin{block}{{\tt adabag} ({\tt predict.boosting}) -- from the docs}
+    Classifies a dataframe using a fitted boosting object.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{The Model}
+    \begin{lstlisting}
+## Getting the package
+require('adabag')
+
+## Constructing the model
+x.d <- as.data.frame(x)
+x.d$y <- y
+boos <- boosting(y~., x.d)
+    \end{lstlisting}
+\end{frame}
+
+\subsection{Test}
+\begin{frame}[fragile]
+  \frametitle{Testing the Model}
+    \begin{lstlisting}
+## Truncate test data
+x.d.tst = as.data.frame(x.tst)
+x.d.tst$y <- y.tst
+
+## Testing
+boos.pr <- predict.boosting(boos, x.d.tst)
+    \end{lstlisting}
+\end{frame}
+
+
+\subsection{Output}
+\begin{frame}[fragile]
+  \frametitle{Model Output}
+    \begin{lstlisting}
+$confusion
+               Observed Class
+Predicted Class   -1    0    1
+             0    49 1559   32
+             1   654  527  698
+             -1  557  327  496
+
+$error
+[1] 0.4255971
+
+    \end{lstlisting}
+\end{frame}
+
+\begin{frame}
+  \Huge Thank You!\\ \ \\ $\smiley$
+\end{frame}
+
+\end{document}
+
