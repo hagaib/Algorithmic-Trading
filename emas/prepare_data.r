@@ -7,6 +7,7 @@
 ## This should be run only once
 
 TEST <- 10^5
+SAMPLE <- 10^4
 
 ## get all of the data
 data.all <- readRDS("../all_data_wide.rds")
@@ -20,4 +21,8 @@ data.train <- tail(data.all, -TEST)
 saveRDS(data.train, "train.rds")
 data.test <- tail(data.all, TEST)
 saveRDS(data.test, "test.rds")  # this is used by the get_data function!	
+
+## For coding and debugging, make a short sample of train
+data.sample <- tail(data.train, SAMPLE)
+saveRDS(data.sample, "sample.rds")
 
