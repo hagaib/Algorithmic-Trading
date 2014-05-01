@@ -7,7 +7,7 @@
 ## This should be run only once
 
 TEST <- 10^5
-SAMPLE <- 10^4
+SAMPLE <- 10^3
 
 ## get all of the data
 data.all <- readRDS("../all_data_wide.rds")
