@@ -18,12 +18,21 @@ ema <- function(n)
       return(c(value.cur, value.cur, 0, 0, 0))
     }
 
+    std.prev <- prev[3]
+    dist.prev <- prev[4]
+    ndist.prev <- prev[5]
+
+    ## The new value is NA, we don't change the mean
+    if(is.na(value.cur))
+    {
+      return(c(value.cur, mean.prev, std.prev, dist.prev, ndist.prev))
+    }
+
     ## Calculate the new mean
     alpha <- 2 / (n+1)
     mean.cur <- alpha * value.cur + (1-alpha) * mean.prev
 
     ## Calculate the new variance
-    std.prev <- prev[3]
     var.prev <- std.prev^2
     var.cur <- (alpha * (value.cur - mean.cur)
                 * (value.cur - mean.prev) + (1-alpha) * var.prev)
@@ -70,7 +79,8 @@ predictors <- array(dim=c(n,m.all))
 
 asset.count <- 0
 ## Loop over assets
-for (asset in c('German5', 'German10', 'EUR_USD', 'TYc1', 'US5Y'))
+assets <- c('German5', 'German10', 'EUR_USD', 'TYc1', 'US5Y')
+for (asset in assets)
 {
   asset.c.name <- paste('close', asset, sep='_')
   asset.c.data <- data[,asset.c.name]
@@ -97,7 +107,7 @@ for (asset in c('German5', 'German10', 'EUR_USD', 'TYc1', 'US5Y'))
 predictors <- predictors[1:(n-2),]
 
 ## We replace NAs with 0s; not optimal, but I can't think of a better solution
-predictors[is.na(predictors)] <- 0
+# predictors[is.na(predictors)] <- 0
 
 
 ## ----- Prepare Response Vectors ----- ##
@@ -107,7 +117,7 @@ response <- data.frame(idx=numeric(n-2))
 ## We actually prepare 5 response vectors, one for each asset.
 ## We begin with the naive alternative of the response vector: the sign of the
 ## difference between the next-next-open and the next-open.
-for (asset in c('German5', 'German10', 'EUR_USD', 'TYc1', 'US5Y'))
+for (asset in assets)
 {
   asset.o.name <- paste('open', asset, sep='_')
   asset.o.data <- data[,asset.o.name]
@@ -116,8 +126,9 @@ for (asset in c('German5', 'German10', 'EUR_USD', 'TYc1', 'US5Y'))
   ## response data frame with [,asset].
   response[,asset] <- sign(diff(asset.o.data)[2:(n-1)])
 
-  ## We replace NAs with 0s; not optimal, but I can't think of a better solution
-  response[,asset][is.na(response[,asset])] <- 0
+  ## We replace NA's with 999's; not optimal, but I can't think of a better
+  ## solution
+  response[,asset][is.na(response[,asset])] <- 999
 
   print(paste("... done with response of", asset))
 }
@@ -132,20 +143,32 @@ for (asset in c('German5', 'German10', 'EUR_USD', 'TYc1', 'US5Y'))
 ## ----- Training Random Forest models ----- ##
 print("Training random forest models...")
 require('randomForest')
+ntree <- 100
 
-rf <- data.frame(idx=numeric(n-2))
-for (asset in c('German5', 'German10', 'EUR_USD', 'TYc1', 'US5Y'))
-{
-  resp <- factor(response[,asset])
-  ## We use 'factor' to force classification
+## Can't make it in a loop, doing it manually... damn R
+resp.german5 <- factor(response[,'German5'])
+rf.german5 <- randomForest(predictors, resp.german5, importance=TRUE,
+                           ntree=ntree, na.action=na.omit)
+print("... done with random forest of German5")
 
-  ## We set 'importance=TRUE' to asses importance of predictors
-  rf[,asset] <- randomForest(predictors, resp, importance=TRUE)
+resp.german10 <- factor(response[,'German10'])
+rf.german10 <- randomForest(predictors, resp.german10, importance=TRUE,
+                            ntree=ntree, na.action=na.omit)
+print("... done with random forest of German10")
 
-  ## TODO: currently we train the model for all values, including NA's replaced
-  ## by 0's. Instead, the model should be trained on data which is not NA in
-  ## the relevant asset (but it can be 0 on the rest).
+resp.eurusd <- factor(response[,'EUR_USD'])
+rf.eurusd <- randomForest(predictors, resp.eurusd, importance=TRUE,
+                          ntree=ntree, na.action=na.omit)
+print("... done with random forest of EUR_USD")
 
-  print(paste("... done with random forest of", asset))
-}
+resp.tyc1 <- factor(response[,'TYc1'])
+rf.tyc1 <- randomForest(predictors, resp.tyc1, importance=TRUE, ntree=ntree,
+                        na.action=na.omit)
+print("... done with random forest of TYc1")
+
+resp.us5y <- factor(response[,'US5Y'])
+rf.us5y <- randomForest(predictors, resp.us5y, importance=TRUE, ntree=ntree,
+                        na.action=na.omit)
+print("... done with random forest of US5Y")
+
 
