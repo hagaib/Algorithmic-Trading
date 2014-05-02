@@ -23,8 +23,8 @@ print(paste("...", n, "rows"))
 print("Preparing predictors matrix...")
 
 ## Loop over assets
-#assets <- c('German5', 'German10', 'EUR_USD', 'TYc1', 'US5Y')
-assets <- c('EUR_USD') 
+assets <- c('German5', 'German10', 'EUR_USD', 'TYc1', 'US5Y')
+# assets <- c('EUR_USD') 
 
 ## We construct a matrix of predictors
 ## m is the number of predictors for each asset
@@ -63,7 +63,7 @@ for (asset in assets)
 
 ## This is the forecast length
 # FUTURE <- 1
-FUTURE <- 15
+FUTURE <- 30
 
 ## We don't make predictions in the last 2 values
 predictors <- predictors[1:(n-(FUTURE+1)),]
