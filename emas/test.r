@@ -64,13 +64,18 @@ while(!is.na(date))
       state[ind] <- emas.states[,ind][5]
     }
 
+    ## Number of bids
+    # bids.name <- paste('n_bids', asset, sep='_')
+    # state[ind] <- row[,bids.name]
+    # state[ind][is.na(state[ind])] <- -1
+
     asset.count <- asset.count + 1
   }
 
   if(timer==0)
   {
     p <- as.numeric(as.character(predict(model, state)))
-    my_bids(c(NA, NA, BID*p, NA, NA))
+    my_bids(c(NA, NA, NA, NA, BID*p))
     if(p!=0)
     {
       timer <- 30

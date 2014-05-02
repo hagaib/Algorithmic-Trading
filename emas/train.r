@@ -57,6 +57,11 @@ for (asset in assets)
     predictors[,ind] <- res[2:(n+1)]
   }
 
+  ## We put number of bids instead of the last EMA, for testing purposes
+  # asset.bids.name <- paste('n_bids', asset, sep='_')
+  # predictors[,ind] <- data[,asset.bids.name]
+  # predictors[,ind][is.na(predictors[,ind])] <- -1
+
   print(paste("... done with predictors of", asset))
   asset.count <- asset.count + 1
 }
