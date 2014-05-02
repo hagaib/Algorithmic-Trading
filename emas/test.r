@@ -25,3 +25,36 @@ my_bids()
 ## Should be empty
 my_data()
 
+m <- 100
+emas <- list()
+emas.states <- array(dim=c(5,m))
+for(i in 1:m)
+{
+  emas[[i]] <- ema(i)
+  emas.states[,i] <- rep(NA, 5)
+}
+
+date <- TRUE
+while(!is.na(date))
+{
+  ## Fetch last row
+  row <- get_data()
+  date <- row[1]
+
+  ## Fetch last close
+  close.name <- "close_EUR_USD"
+  close <- row[,close.name]
+  
+  ## Let EMAs work
+  state <- rep(NA, m)
+  for(i in 1:m)
+  {
+    ema.i <- emas[[i]]
+    emas.states[,i] <- ema.i(emas.states[,i], c(close, rep(NA, 4)))
+    state[i] <- emas.states[,i][5]
+  }
+
+  print(model.predict(state))
+  
+}
+

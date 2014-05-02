@@ -6,7 +6,7 @@
 ## This is taken from Tal's example
 ## This should be run only once
 
-TEST <- 10^5
+TEST <- 10^4
 SAMPLE <- 10^4
 
 ## get all of the data
