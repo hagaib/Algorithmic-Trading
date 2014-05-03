@@ -3,7 +3,7 @@
 ## predictors, and use random forests to predict
 
 ## TODO: connect to API for testing
-FUTURE <- 30
+FUTURE <- 10
 BID <- 1000000
 
 ## Loading API
@@ -78,7 +78,7 @@ while(!is.na(date))
     my_bids(c(NA, NA, NA, NA, BID*p))
     if(p!=0)
     {
-      timer <- 30
+      timer <- FUTURE
     }
     pnl <- c(pnl, estimated_total_money()-1000000)
   } else {

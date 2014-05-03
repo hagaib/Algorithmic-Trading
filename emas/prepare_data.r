@@ -6,8 +6,8 @@
 ## This is taken from Tal's example
 ## This should be run only once
 
-TEST <- 10^4
-SAMPLE <- 10^4
+TEST <- 11^4
+SAMPLE <- 2*10^4
 
 ## get all of the data
 data.all <- readRDS("../all_data_wide.rds")

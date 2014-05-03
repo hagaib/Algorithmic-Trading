@@ -68,7 +68,7 @@ for (asset in assets)
 
 ## This is the forecast length
 # FUTURE <- 1
-FUTURE <- 30
+FUTURE <- 10
 
 ## We don't make predictions in the last 2 values
 predictors <- predictors[1:(n-(FUTURE+1)),]
