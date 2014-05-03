@@ -17,7 +17,7 @@ head(data.all)
 dim(data.all) # 647 784
 
 ## split the data to training and testing:
-data.train <- tail(data.all, -TEST)
+data.train <- head(data.all, -TEST)
 saveRDS(data.train, "train.rds")
 data.test <- tail(data.all, TEST)
 saveRDS(data.test, "test.rds")  # this is used by the get_data function!	
