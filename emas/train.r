@@ -2,7 +2,7 @@
 ## Main idea: use normalized distances from various moving averages as
 ## predictors, and use random forests to predict
 
-source('ema.r')
+source('emas/ema.r')
 
 ## ----- Reading Train Data ----- ##
 ## Read data; we run this only after the prepare data package ran
@@ -28,47 +28,52 @@ assets <- c('German5', 'German10', 'EUR_USD', 'TYc1', 'US5Y')
 
 ## We construct a matrix of predictors
 ## m is the number of predictors for each asset
-m <- 100
-m.all <- m * length(assets)
+# m <- 500
+# m.all <- m * length(assets)
+m.all <- 250-1
 
 ## Prepare the predictors array
 predictors <- array(dim=c(n,m.all))
+vipvars <- readRDS("indices.rds")
 
 ## This counter is used for indexing
 asset.count <- 0
+ind <- 1
 for (asset in assets)
 {
   asset.c.name <- paste('close', asset, sep='_')
   asset.c.data <- data[,asset.c.name]
-
+  asset.ema.indices <- vipvars[,asset]
+  
   ## Time for stupid R magic to create a list of vectors from our data
   lst <- mapply(c, asset.c.data,
                 rep(NA, n), rep(NA, n), rep(NA, n), rep(NA, n), SIMPLIFY=FALSE)
-
+  
   ## Get the EMA vector for each relevant period
-  for (i in (2:(m+1)))
+#   for (i in (2:(m+1)))
+
+  for (i in asset.ema.indices)
   {
-    ema.i <- ema(i)
-    ema.i.lst <- Reduce(ema.i, lst, init=rep(NA, 5), accumulate=TRUE)
-    ind <- asset.count * m + (i-1)
-
-    ## This R magic creates a list of last vector values
-    res <- sapply(ema.i.lst, function(v) v[length(v)])
-    predictors[,ind] <- res[2:(n+1)]
+    if (i != 0)
+    {
+      ema.i <- ema(i)
+      ema.i.lst <- Reduce(ema.i, lst, init=rep(NA, 5), accumulate=TRUE)
+     # ind <- asset.count * m + (i-1)
+      
+      ## This R magic creates a list of last vector values
+      res <- sapply(ema.i.lst, function(v) v[length(v)])
+      predictors[,ind] <- res[2:(n+1)]
+      ind <- ind+1
+    }
   }
-
-  ## We put number of bids instead of the last EMA, for testing purposes
-  # asset.bids.name <- paste('n_bids', asset, sep='_')
-  # predictors[,ind] <- data[,asset.bids.name]
-  # predictors[,ind][is.na(predictors[,ind])] <- -1
-
+  
   print(paste("... done with predictors of", asset))
   asset.count <- asset.count + 1
 }
 
 ## This is the forecast length
 # FUTURE <- 1
-FUTURE <- 30
+FUTURE <- 10
 
 ## We don't make predictions in the last 2 values
 predictors <- predictors[1:(n-(FUTURE+1)),]
@@ -88,15 +93,15 @@ for (asset in assets)
 {
   asset.o.name <- paste('open', asset, sep='_')
   asset.o.data <- data[,asset.o.name]
-
+  
   ## We prepare an asset-specific response vector, and the plug it into our
   ## response data frame with [,asset].
   response[,asset] <- sign(diff(asset.o.data, lag=FUTURE)[2:(n-FUTURE)])
-
+  
   ## We replace NA's with 999's; not optimal, but I can't think of a better
   ## solution
   # response[,asset][is.na(response[,asset])] <- 999
-
+  
   print(paste("... done with response of", asset))
 }
 
@@ -106,11 +111,32 @@ for (asset in assets)
 ## for "more or less the same", where what defines "significant" is at least
 ## 20% of the current bar size (high - low).
 
+## ----- Fixing NA-Values Responses ----- ##
+print("Fixing NA-Values Responses...")
+
+for (asset in assets)
+{
+  resp.asset <- response[,asset]
+  if(is.na(resp.asset[n-(FUTURE+1)]))
+  {
+    resp.asset[n-(FUTURE+1)] <- 0
+  }
+  for (i in (n-(FUTURE+2)):1)
+  {
+    if(is.na(resp.asset[i]))
+    {
+      resp.asset[i] <- resp.asset[i+1]
+    }
+  }
+  
+  response[,asset] <- resp.asset
+  print(paste("... done with fixing NAs of", asset))
+}
 
 ## ----- Training Random Forest models ----- ##
 print("Training random forest models...")
 require('randomForest')
-ntree <- 100
+ntree <- 70
 
 # ## Can't make it in a loop, doing it manually... damn R
 # resp.german5 <- factor(response[,'German5'])
@@ -122,20 +148,8 @@ ntree <- 100
 # rf.german10 <- randomForest(predictors, resp.german10, importance=TRUE,
 #                             ntree=ntree, na.action=na.omit)
 # print("... done with random forest of German10")
-
-resp.eurusd <- response[,'EUR_USD']
-if(is.na(resp.eurusd[n-(FUTURE+1)]))
-{
-  resp.eurusd[n-(FUTURE+1)] <- 0
-}
-for (i in (n-(FUTURE+2)):1)
-{
-  if(is.na(resp.eurusd[i]))
-  {
-    resp.eurusd[i] <- resp.eurusd[i+1]
-  }
-}
-resp.eurusd.f <- factor(resp.eurusd)
+# 
+resp.eurusd.f <- factor(response[, 'EUR_USD'])
 rf.eurusd <- randomForest(predictors, resp.eurusd.f, importance=TRUE,
                           ntree=ntree, na.action=na.omit)
 print("... done with random forest of EUR_USD")
@@ -151,4 +165,3 @@ print("... done with random forest of EUR_USD")
 # print("... done with random forest of US5Y")
 
 saveRDS(rf.eurusd, "eurusd.rds")
-
