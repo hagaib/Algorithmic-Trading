@@ -1,4 +1,4 @@
-FreeMoney
+Algorithmic Trading
 =========
 
-We're going to make money!
+This experiment in algorithmic trading implements a pair trading startegy on the German 5 year and German 10 year bonds.
